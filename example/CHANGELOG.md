@@ -2,8 +2,8 @@
 
 ## [Unreleased]
 
-- Eine noch unveröffentlichte Änderung.
+- An unreleased change.
 
 ## [1.1.0] - 2026-07-25
 
-- Erste Beispielversion.
+- First example version.

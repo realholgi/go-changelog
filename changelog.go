@@ -1,5 +1,5 @@
-// Paket changelog bereitet ein Keep-a-Changelog-ähnliches Markdown-Dokument
-// für eine wiederverwendbare Bootstrap-Anzeige auf.
+// Package changelog prepares a Keep a Changelog-style Markdown document for a
+// reusable Bootstrap display.
 package changelog
 
 import (
@@ -10,122 +10,121 @@ import (
 	"github.com/yuin/goldmark"
 )
 
-// Inhalt enthält das gerenderte Changelog und das Datum der aktuellen Version.
-type Inhalt struct {
-	HTML  string
-	Datum string
+// Content contains the rendered changelog and the current release date.
+type Content struct {
+	HTML string
+	Date string
 
-	aktuelleVersion string
-	optionen        Optionen
+	currentVersion string
+	options        Options
 }
 
-// Aufbereiten rendert alle nicht leeren Release-Abschnitte mit den
-// Standardoptionen.
-func Aufbereiten(markdown, aktuelleVersion string) Inhalt {
-	return AufbereitenMitOptionen(markdown, aktuelleVersion, Optionen{})
+// Prepare renders every non-empty release section with the default options.
+func Prepare(markdown, currentVersion string) Content {
+	return PrepareWithOptions(markdown, currentVersion, Options{})
 }
 
-// AufbereitenMitOptionen rendert alle nicht leeren Release-Abschnitte in ihrer
-// ursprünglichen Reihenfolge und konfiguriert die Anzeige.
-func AufbereitenMitOptionen(markdown, aktuelleVersion string, optionen Optionen) Inhalt {
-	optionen = optionen.mitStandardwerten()
+// PrepareWithOptions renders every non-empty release section in source order
+// and configures the display.
+func PrepareWithOptions(markdown, currentVersion string, options Options) Content {
+	options = options.withDefaults()
 
-	var ausgabe strings.Builder
-	for _, version := range versionen(markdown) {
-		abschnitt := abschnitt(markdown, version)
-		if abschnitt == "" {
+	var output strings.Builder
+	for _, version := range versions(markdown) {
+		section := releaseSection(markdown, version)
+		if section == "" {
 			continue
 		}
 
-		datum := releaseDatum(markdown, version)
-		ausgabe.WriteString(`<div class="changelog-section" data-version="`)
-		ausgabe.WriteString(html.EscapeString(version))
-		ausgabe.WriteString(`"><h3>Version `)
-		ausgabe.WriteString(html.EscapeString(version))
-		if datum != "" {
-			ausgabe.WriteString(` — `)
-			ausgabe.WriteString(html.EscapeString(datum))
+		date := releaseDate(markdown, version)
+		output.WriteString(`<div class="changelog-section" data-version="`)
+		output.WriteString(html.EscapeString(version))
+		output.WriteString(`"><h3>Version `)
+		output.WriteString(html.EscapeString(version))
+		if date != "" {
+			output.WriteString(` — `)
+			output.WriteString(html.EscapeString(date))
 		}
-		ausgabe.WriteString(`</h3>`)
-		ausgabe.WriteString(markdownZuHTML(abschnitt))
-		ausgabe.WriteString(`</div>`)
+		output.WriteString(`</h3>`)
+		output.WriteString(markdownToHTML(section))
+		output.WriteString(`</div>`)
 	}
 
-	return Inhalt{
-		HTML:            ausgabe.String(),
-		Datum:           releaseDatum(markdown, aktuelleVersion),
-		aktuelleVersion: aktuelleVersion,
-		optionen:        optionen,
+	return Content{
+		HTML:           output.String(),
+		Date:           releaseDate(markdown, currentVersion),
+		currentVersion: currentVersion,
+		options:        options,
 	}
 }
 
-func versionen(markdown string) []string {
-	var ergebnis []string
-	for _, zeile := range strings.Split(markdown, "\n") {
-		if version, _, ok := releaseKopf(zeile); ok {
-			ergebnis = append(ergebnis, version)
+func versions(markdown string) []string {
+	var result []string
+	for _, line := range strings.Split(markdown, "\n") {
+		if version, _, ok := releaseHeading(line); ok {
+			result = append(result, version)
 		}
 	}
-	return ergebnis
+	return result
 }
 
-func abschnitt(markdown, gesuchteVersion string) string {
-	zeilen := strings.Split(markdown, "\n")
+func releaseSection(markdown, wantedVersion string) string {
+	lines := strings.Split(markdown, "\n")
 	start := -1
-	for i, zeile := range zeilen {
-		version, _, ok := releaseKopf(zeile)
+	for i, line := range lines {
+		version, _, ok := releaseHeading(line)
 		if !ok {
 			continue
 		}
 		if start != -1 {
-			return strings.TrimSpace(strings.Join(zeilen[start:i], "\n"))
+			return strings.TrimSpace(strings.Join(lines[start:i], "\n"))
 		}
-		if version == gesuchteVersion {
+		if version == wantedVersion {
 			start = i + 1
 		}
 	}
 	if start == -1 {
 		return ""
 	}
-	return strings.TrimSpace(strings.Join(zeilen[start:], "\n"))
+	return strings.TrimSpace(strings.Join(lines[start:], "\n"))
 }
 
-func releaseDatum(markdown, gesuchteVersion string) string {
-	for _, zeile := range strings.Split(markdown, "\n") {
-		version, datum, ok := releaseKopf(zeile)
-		if ok && version == gesuchteVersion {
-			return datum
+func releaseDate(markdown, wantedVersion string) string {
+	for _, line := range strings.Split(markdown, "\n") {
+		version, date, ok := releaseHeading(line)
+		if ok && version == wantedVersion {
+			return date
 		}
 	}
 	return ""
 }
 
-func releaseKopf(zeile string) (version, datum string, ok bool) {
-	zeile = strings.TrimSuffix(zeile, "\r")
-	if !strings.HasPrefix(zeile, "## [") {
+func releaseHeading(line string) (version, date string, ok bool) {
+	line = strings.TrimSuffix(line, "\r")
+	if !strings.HasPrefix(line, "## [") {
 		return "", "", false
 	}
-	ende := strings.Index(zeile[len("## ["):], "]")
-	if ende == -1 {
+	end := strings.Index(line[len("## ["):], "]")
+	if end == -1 {
 		return "", "", false
 	}
-	ende += len("## [")
-	version = zeile[len("## ["):ende]
+	end += len("## [")
+	version = line[len("## ["):end]
 	if version == "" {
 		return "", "", false
 	}
 
-	rest := strings.TrimSpace(zeile[ende+1:])
+	rest := strings.TrimSpace(line[end+1:])
 	if strings.HasPrefix(rest, "- ") {
-		datum = strings.TrimSpace(strings.TrimPrefix(rest, "- "))
+		date = strings.TrimSpace(strings.TrimPrefix(rest, "- "))
 	}
-	return version, datum, true
+	return version, date, true
 }
 
-func markdownZuHTML(markdown string) string {
-	var ausgabe bytes.Buffer
-	if err := goldmark.Convert([]byte(markdown), &ausgabe); err != nil {
+func markdownToHTML(markdown string) string {
+	var output bytes.Buffer
+	if err := goldmark.Convert([]byte(markdown), &output); err != nil {
 		return markdown
 	}
-	return ausgabe.String()
+	return output.String()
 }

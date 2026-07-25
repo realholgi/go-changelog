@@ -15,16 +15,16 @@ var changelogMarkdown string
 var version = "1.1.0"
 
 func main() {
-	inhalt := changelog.Aufbereiten(changelogMarkdown, version)
-	vorlage := template.Must(template.ParseFiles("base.html"))
+	content := changelog.Prepare(changelogMarkdown, version)
+	page := template.Must(template.ParseFiles("base.html"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		daten := struct {
-			Changelog changelog.Inhalt
+		data := struct {
+			Changelog changelog.Content
 		}{
-			Changelog: inhalt,
+			Changelog: content,
 		}
-		if err := vorlage.Execute(w, daten); err != nil {
+		if err := page.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})

@@ -1,8 +1,8 @@
 # go-changelog
 
-`go-changelog` rendert Release-Abschnitte aus einer `CHANGELOG.md` und liefert
-eine direkt einsetzbare Bootstrap-5-Anzeige mit Versionslink, Neu-Badge, Modal
-und `localStorage`-Erinnerung.
+`go-changelog` renders release sections from a `CHANGELOG.md` and provides a
+ready-to-use Bootstrap 5 display with a version link, new-release badge, modal,
+and `localStorage` reminder.
 
 ## Installation
 
@@ -10,7 +10,7 @@ und `localStorage`-Erinnerung.
 go get github.com/realholgi/go-changelog
 ```
 
-## Verwendung
+## Usage
 
 ```go
 package main
@@ -27,40 +27,39 @@ var changelogMarkdown string
 var version = "dev"
 
 func main() {
-	inhalt := changelog.Aufbereiten(changelogMarkdown, version)
-	// Inhalt als Teil der Daten an html/template übergeben.
-	_ = inhalt
+	content := changelog.Prepare(changelogMarkdown, version)
+	// Pass Content to html/template as part of the template data.
+	_ = content
 }
 ```
 
-Im Go-Template werden Auslöser und Modal dort platziert, wo die Anwendung sie
-benötigt:
+Place the trigger and modal where the application needs them:
 
 ```gotemplate
 <nav>
-  {{.Changelog.Ausloeser}}
+  {{.Changelog.Trigger}}
 </nav>
 
 <script src="/static/bootstrap.bundle.min.js"></script>
 {{.Changelog.Modal}}
 ```
 
-Bootstrap 5 muss von der Anwendung geladen werden.
+The embedding application must load Bootstrap 5.
 
-Die Anzeige kann angepasst werden:
+Customize the display with options:
 
 ```go
-inhalt := changelog.AufbereitenMitOptionen(markdown, version, changelog.Optionen{
-	ModalID:     "releaseNotes",
-	StorageKey:  "my_app_changelog_seen",
-	Titel:       "Release notes",
-	NeuIn:       "New in",
-	Schliessen:  "Close",
-	Bestaetigen: "Got it",
+content := changelog.PrepareWithOptions(markdown, version, changelog.Options{
+	ModalID:    "releaseNotes",
+	StorageKey: "my_app_changelog_seen",
+	Title:      "Release notes",
+	NewIn:      "New in",
+	Close:      "Close",
+	Confirm:    "Got it",
 })
 ```
 
-Erwartet werden Release-Überschriften in dieser Form:
+Release headings must use this format:
 
 ```markdown
 ## [Unreleased]
@@ -68,10 +67,10 @@ Erwartet werden Release-Überschriften in dieser Form:
 ## [1.2.0] - 2026-07-24
 ```
 
-`Inhalt.HTML` enthält alle nicht leeren Release-Abschnitte. `Inhalt.Datum`
-enthält das Datum der aktuellen Version, sofern diese im Changelog vorhanden
-ist.
+`Content.HTML` contains every non-empty release section. `Content.Date`
+contains the date of the current version when that version exists in the
+changelog.
 
-## Lizenz
+## License
 
 MIT
