@@ -27,20 +27,22 @@ func Prepare(markdown, currentVersion string) Content {
 // PrepareWithOptions renders every non-empty release section in source order
 // and configures the display.
 func PrepareWithOptions(markdown, currentVersion string, options Options) Content {
-	options = options.withDefaults()
+	document := parseReleaseDocument(markdown)
+	options = options.withDefaults(currentVersion)
 
 	var output strings.Builder
-	for _, version := range versions(markdown) {
-		section := releaseSection(markdown, version)
+	for _, release := range document.releases {
+		first := document.first(release.version)
+		section := first.section
 		if section == "" {
 			continue
 		}
 
-		date := releaseDate(markdown, version)
+		date := first.date
 		output.WriteString(`<div class="changelog-section" data-version="`)
-		output.WriteString(html.EscapeString(version))
+		output.WriteString(html.EscapeString(first.version))
 		output.WriteString(`"><h3>Version `)
-		output.WriteString(html.EscapeString(version))
+		output.WriteString(html.EscapeString(first.version))
 		if date != "" {
 			output.WriteString(` — `)
 			output.WriteString(html.EscapeString(date))
@@ -52,51 +54,56 @@ func PrepareWithOptions(markdown, currentVersion string, options Options) Conten
 
 	return Content{
 		HTML:           output.String(),
-		Date:           releaseDate(markdown, currentVersion),
+		Date:           document.first(currentVersion).date,
 		currentVersion: currentVersion,
 		options:        options,
 	}
 }
 
-func versions(markdown string) []string {
-	var result []string
-	for _, line := range strings.Split(markdown, "\n") {
-		if version, _, ok := releaseHeading(line); ok {
-			result = append(result, version)
-		}
-	}
-	return result
+type release struct {
+	version string
+	date    string
+	section string
 }
 
-func releaseSection(markdown, wantedVersion string) string {
+type releaseDocument struct {
+	releases       []release
+	firstByVersion map[string]release
+}
+
+func parseReleaseDocument(markdown string) releaseDocument {
 	lines := strings.Split(markdown, "\n")
+	var releases []release
 	start := -1
+	var current release
 	for i, line := range lines {
-		version, _, ok := releaseHeading(line)
+		version, date, ok := releaseHeading(line)
 		if !ok {
 			continue
 		}
 		if start != -1 {
-			return strings.TrimSpace(strings.Join(lines[start:i], "\n"))
+			current.section = strings.TrimSpace(strings.Join(lines[start:i], "\n"))
+			releases = append(releases, current)
 		}
-		if version == wantedVersion {
-			start = i + 1
+		current = release{version: version, date: date}
+		start = i + 1
+	}
+	if start != -1 {
+		current.section = strings.TrimSpace(strings.Join(lines[start:], "\n"))
+		releases = append(releases, current)
+	}
+
+	firstByVersion := make(map[string]release, len(releases))
+	for _, release := range releases {
+		if _, exists := firstByVersion[release.version]; !exists {
+			firstByVersion[release.version] = release
 		}
 	}
-	if start == -1 {
-		return ""
-	}
-	return strings.TrimSpace(strings.Join(lines[start:], "\n"))
+	return releaseDocument{releases: releases, firstByVersion: firstByVersion}
 }
 
-func releaseDate(markdown, wantedVersion string) string {
-	for _, line := range strings.Split(markdown, "\n") {
-		version, date, ok := releaseHeading(line)
-		if ok && version == wantedVersion {
-			return date
-		}
-	}
-	return ""
+func (d releaseDocument) first(version string) release {
+	return d.firstByVersion[version]
 }
 
 func releaseHeading(line string) (version, date string, ok bool) {

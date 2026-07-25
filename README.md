@@ -59,6 +59,10 @@ content := changelog.PrepareWithOptions(markdown, version, changelog.Options{
 })
 ```
 
+When `ModalID` and `StorageKey` are empty, go-changelog derives distinct,
+CSS-safe defaults from the current version. Set them explicitly when several
+displays represent the same version on one page.
+
 Release headings must use this format:
 
 ```markdown

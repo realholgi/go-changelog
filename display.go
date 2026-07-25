@@ -3,10 +3,13 @@ package changelog
 import (
 	"bytes"
 	"html/template"
+	"strings"
+	"unicode"
 )
 
 // Options customizes display IDs, browser storage, and labels.
-// Empty fields are replaced by English defaults.
+// Empty IDs and storage keys are derived from the current version; empty labels
+// are replaced by English defaults.
 type Options struct {
 	ModalID    string
 	StorageKey string
@@ -16,12 +19,15 @@ type Options struct {
 	Confirm    string
 }
 
-func (o Options) withDefaults() Options {
+func (o Options) withDefaults(version string) Options {
+	identity := displayIdentity(version)
 	if o.ModalID == "" {
-		o.ModalID = "changelogModal"
+		o.ModalID = identity.modalID
+	} else {
+		o.ModalID = normalizeIdentifier(o.ModalID)
 	}
 	if o.StorageKey == "" {
-		o.StorageKey = "changelog_seen"
+		o.StorageKey = identity.storageKey
 	}
 	if o.Title == "" {
 		o.Title = "Changelog"
@@ -36,6 +42,44 @@ func (o Options) withDefaults() Options {
 		o.Confirm = "OK"
 	}
 	return o
+}
+
+type displayIDs struct {
+	modalID    string
+	storageKey string
+}
+
+func displayIdentity(version string) displayIDs {
+	suffix := normalizeIdentifier(version)
+	return displayIDs{
+		modalID:    "changelogModal-" + suffix,
+		storageKey: "changelog_seen_" + suffix,
+	}
+}
+
+func normalizeIdentifier(value string) string {
+	var output strings.Builder
+	previousSeparator := false
+	for _, r := range value {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' {
+			output.WriteRune(r)
+			previousSeparator = false
+			continue
+		}
+		if !previousSeparator {
+			output.WriteByte('-')
+			previousSeparator = true
+		}
+	}
+	normalized := strings.Trim(output.String(), "-")
+	if normalized == "" {
+		return "changelog"
+	}
+	first := normalized[0]
+	if first >= '0' && first <= '9' {
+		return "changelog-" + normalized
+	}
+	return normalized
 }
 
 var triggerTemplate = template.Must(template.New("changelog-trigger").Parse(
