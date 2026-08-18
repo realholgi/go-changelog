@@ -12,7 +12,9 @@ import (
 //go:embed CHANGELOG.md
 var changelogMarkdown string
 
-var version = "1.1.0"
+// version is overridden for release builds with:
+// go build -ldflags "-X main.version=v1.1.0" .
+var version = "dev"
 
 func main() {
 	content := changelog.Prepare(changelogMarkdown, version)

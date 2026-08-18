@@ -24,6 +24,8 @@ import (
 //go:embed CHANGELOG.md
 var changelogMarkdown string
 
+// version is overridden for release builds with:
+// go build -ldflags "-X main.version=v1.2.0" .
 var version = "dev"
 
 func main() {
@@ -32,6 +34,17 @@ func main() {
 	_ = content
 }
 ```
+
+`version` belongs to the embedding application. Keep a development fallback
+and inject the release version during the build:
+
+```sh
+go build -ldflags "-X main.version=v1.2.0" .
+```
+
+The value should match the release heading in `CHANGELOG.md`. It is used to
+select the current release and derive the default modal ID and browser storage
+key. A value of `dev` disables the new-release badge reminder behavior.
 
 Place the trigger and modal where the application needs them:
 
