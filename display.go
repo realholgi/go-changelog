@@ -2,6 +2,7 @@ package changelog
 
 import (
 	"bytes"
+	"embed"
 	"html/template"
 	"strings"
 	"unicode"
@@ -82,61 +83,12 @@ func normalizeIdentifier(value string) string {
 	return normalized
 }
 
-var triggerTemplate = template.Must(template.New("changelog-trigger").Parse(
-	`{{if .Available}}<a href="#" class="text-white text-decoration-none" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#{{.ModalID}}" title="{{.Title}}">
-  {{.Version}}
-</a>
-<a id="{{.ModalID}}-badge" href="#"
-   class="badge bg-warning text-dark ms-2 text-decoration-none d-none"
-   data-bs-toggle="modal" data-bs-target="#{{.ModalID}}">
-  {{.NewIn}} {{.Version}}
-</a>{{else}}{{.Version}}{{end}}`,
-))
+//go:embed templates/*.html
+var displayTemplates embed.FS
 
-var modalTemplate = template.Must(template.New("changelog-modal").Parse(
-	`{{if .Available}}<style>
-#{{.ModalID}} .modal-body h3 { margin-top: 1.2rem; margin-bottom: 0.6rem; font-size: 1.1rem; }
-#{{.ModalID}} .modal-body h3:first-child { margin-top: 0; }
-#{{.ModalID}} .modal-body ul { margin-bottom: 0.8rem; padding-left: 1.5rem; }
-#{{.ModalID}} .modal-body li { margin-bottom: 0.4rem; }
-#{{.ModalID}} .changelog-section { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef; }
-#{{.ModalID}} .changelog-section h3 { margin-top: 0; margin-bottom: 0.8rem; }
-#{{.ModalID}} .changelog-section:last-child { border-bottom: none; }
-</style>
-<div class="modal fade" id="{{.ModalID}}" tabindex="-1" aria-labelledby="{{.ModalID}}Label" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="{{.ModalID}}Label">{{.Title}}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{.Close}}"></button>
-      </div>
-      <div class="modal-body">
-        <div class="changelog-container">{{.HTML}}</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{.Confirm}}</button>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-(function () {
-  var v = '{{.Version}}'.replace(/^v/, '');
-  if (v === 'dev') return;
-  var badge = document.getElementById('{{.ModalID}}-badge');
-  if (!badge) return;
-  var lastSeen = localStorage.getItem('{{.StorageKey}}');
-  if (lastSeen !== v) {
-    badge.classList.remove('d-none');
-  }
-  document.getElementById('{{.ModalID}}')
-    .addEventListener('show.bs.modal', function () {
-      localStorage.setItem('{{.StorageKey}}', v);
-      badge.classList.add('d-none');
-    });
-}());
-</script>{{end}}`,
-))
+var triggerTemplate = template.Must(template.ParseFS(displayTemplates, "templates/trigger.html"))
+
+var modalTemplate = template.Must(template.ParseFS(displayTemplates, "templates/modal.html"))
 
 type view struct {
 	Version    string
